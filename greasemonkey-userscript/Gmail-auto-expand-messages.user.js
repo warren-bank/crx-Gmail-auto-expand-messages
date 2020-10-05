@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gmail - Expand All Messages
 // @description  Automatically expand all Gmail messages after a thread is opened.
-// @version      0.1.0
+// @version      0.2.0
 // @match        *://mail.google.com/mail/u/*
 // @icon         https://www.google.com/gmail/about/static/favicon.ico
 // @run-at       document-idle
@@ -17,20 +17,37 @@
 // https://www.chromium.org/developers/design-documents/user-scripts
 
 var user_options = {
-  "script_injection_delay_ms": 0
+  "script_injection_delay_ms": 0,
+  "expand_interval_delay_ms":  2500,
+  "scroll_timeout_delay_ms":   2500,
+  "scroll_to_last_message":    true
 }
 
 var payload = function(){
+  const perform_scroll = () => {
+    if (window.scroll_to_last_message) {
+      setTimeout(() => {
+        const container = document.getElementById(':3')
+
+        if (container) {
+          container.scrollTo(0, container.scrollHeight)
+        }
+      }, window.scroll_timeout_delay_ms)
+    }
+  }
+
   const expand_all = () => {
     const el = document.querySelector('div[role="button"][data-tooltip="Expand all"]')
 
-    if (el && (el.parentNode.style.display !== 'none'))
+    if (el && (el.parentNode.style.display !== 'none')) {
       el.click()
+      perform_scroll()
+    }
   }
 
   setInterval(
     expand_all,
-    2500
+    window.expand_interval_delay_ms
   )
 }
 
@@ -62,7 +79,17 @@ var inject_function = function(_function){
   head.appendChild(script)
 }
 
+var inject_options = function(){
+  var _function = `function(){
+    window.expand_interval_delay_ms = ${user_options['expand_interval_delay_ms']}
+    window.scroll_timeout_delay_ms  = ${user_options['scroll_timeout_delay_ms']}
+    window.scroll_to_last_message   = ${user_options['scroll_to_last_message']}
+  }`
+  inject_function(_function)
+}
+
 var bootstrap = function(){
+  inject_options()
   inject_function(payload)
 }
 
